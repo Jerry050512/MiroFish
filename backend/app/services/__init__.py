@@ -5,6 +5,7 @@
 from .ontology_generator import OntologyGenerator
 from .graph_builder import GraphBuilderService
 from .text_processor import TextProcessor
+from .entity_reader import GraphEntityReader, LocalEntityReader
 from .zep_entity_reader import ZepEntityReader, EntityNode, FilteredEntities
 from .oasis_profile_generator import OasisProfileGenerator, OasisAgentProfile
 from .simulation_manager import SimulationManager, SimulationState, SimulationStatus
@@ -41,6 +42,8 @@ __all__ = [
     'OntologyGenerator', 
     'GraphBuilderService', 
     'TextProcessor',
+    'GraphEntityReader',
+    'LocalEntityReader',
     'ZepEntityReader',
     'EntityNode',
     'FilteredEntities',

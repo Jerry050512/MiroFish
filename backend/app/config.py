@@ -32,6 +32,9 @@ class Config:
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
     
+    # GraphRAG 提供方配置
+    USE_LOCAL_GRAPHRAG = os.environ.get('USE_LOCAL_GRAPHRAG', 'false').lower() == 'true'
+
     # Zep配置
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
     
@@ -69,7 +72,7 @@ class Config:
         errors = []
         if not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY 未配置")
-        if not cls.ZEP_API_KEY:
+        if not cls.USE_LOCAL_GRAPHRAG and not cls.ZEP_API_KEY:
             errors.append("ZEP_API_KEY 未配置")
         return errors
 

@@ -14,7 +14,8 @@ from enum import Enum
 
 from ..config import Config
 from ..utils.logger import get_logger
-from .zep_entity_reader import ZepEntityReader, FilteredEntities
+from .entity_reader import GraphEntityReader
+from .zep_entity_reader import FilteredEntities
 from .oasis_profile_generator import OasisProfileGenerator, OasisAgentProfile
 from .simulation_config_generator import SimulationConfigGenerator, SimulationParameters
 
@@ -116,7 +117,7 @@ class SimulationManager:
     模拟管理器
     
     核心功能：
-    1. 从Zep图谱读取实体并过滤
+    1. 从图谱读取实体并过滤
     2. 生成OASIS Agent Profile
     3. 使用LLM智能生成模拟配置参数
     4. 准备预设脚本所需的所有文件
@@ -202,7 +203,7 @@ class SimulationManager:
         
         Args:
             project_id: 项目ID
-            graph_id: Zep图谱ID
+            graph_id: 图谱ID
             enable_twitter: 是否启用Twitter模拟
             enable_reddit: 是否启用Reddit模拟
             
@@ -270,9 +271,9 @@ class SimulationManager:
             
             # ========== 阶段1: 读取并过滤实体 ==========
             if progress_callback:
-                progress_callback("reading", 0, "正在连接Zep图谱...")
+                progress_callback("reading", 0, "正在连接图谱数据源...")
             
-            reader = ZepEntityReader()
+            reader = GraphEntityReader()
             
             if progress_callback:
                 progress_callback("reading", 30, "正在读取节点数据...")
