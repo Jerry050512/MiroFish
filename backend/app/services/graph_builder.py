@@ -347,9 +347,8 @@ class GraphBuilderService:
     def set_ontology(self, graph_id: str, ontology: Dict[str, Any]):
         """设置图谱本体"""
         if self.use_local:
-            # 本地模式：本体信息存储在内存中
-            # 实际的本体约束通过 prompt 在提取时应用
-            pass
+            # 本地模式：存储在 extractor 中
+            self.local_memory.indexer.extractor.set_ontology(ontology)
         else:
             # Zep Cloud 模式
             self._set_zep_ontology(graph_id, ontology)
@@ -439,7 +438,18 @@ class GraphBuilderService:
         """分批添加文本到图谱"""
         if self.use_local:
             # 本地模式：直接通过索引管道处理
-            return []
+            total_chunks = len(chunks)
+            for i, chunk in enumerate(chunks):
+                if progress_callback:
+                    progress = (i + 1) / total_chunks
+                    progress_callback(f"正在处理本地块 {i+1}/{total_chunks}...", progress)
+
+                # 直接使用 local_memory 的 indexer 处理
+                self.local_memory.indexer._process_chunk_from_text(chunk, document_id=graph_id, index=i)
+
+            # 保存数据
+            self.local_memory.graph_store.save_data()
+            return [f"local_chunk_{i}" for i in range(total_chunks)]
         else:
             # Zep Cloud 模式
             return self._add_zep_text_batches(graph_id, chunks, batch_size, progress_callback)
@@ -500,7 +510,20 @@ class GraphBuilderService:
         timeout: int = 600
     ):
         """等待所有 episode 处理完成"""
-        if self.use_local or not episode_uuids:
+        if self.use_local:
+            # 本地模式：在此处执行社区构建，因为 Zep 模式下这是自动或后续步骤
+            if progress_callback:
+                progress_callback("正在构建本地社区...", 0.5)
+
+            self.local_memory.indexer.build_communities(
+                levels=Config.GRAPHRAG_COMMUNITY_LEVELS
+            )
+
+            if progress_callback:
+                progress_callback("本地社区构建完成", 1.0)
+            return
+
+        if not episode_uuids:
             if progress_callback:
                 progress_callback("无需等待", 1.0)
             return

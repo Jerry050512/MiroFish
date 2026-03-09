@@ -203,12 +203,10 @@ class CommunitySummarizer:
         )
         
         try:
-            response = self.llm_client.chat_completion(
+            content = self.llm_client.chat(
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
             )
-            
-            content = response["choices"][0]["message"]["content"]
             
             # 解析JSON
             content = content.strip()

@@ -163,6 +163,17 @@ class IndexingPipeline:
         
         logger.info(f"Text indexed successfully: {document_id}")
     
+    def _process_chunk_from_text(self, text: str, document_id: str = "", index: int = 0):
+        """从文本直接创建并处理块"""
+        chunk_id = hashlib.md5(f"{document_id}_{index}_{text[:50]}".encode()).hexdigest()
+        chunk = TextChunk(
+            id=chunk_id,
+            text=text,
+            index=index,
+            document_id=document_id
+        )
+        self._process_chunk(chunk)
+
     def _process_chunk(self, chunk: TextChunk):
         """处理单个文本块"""
         # 保存文本块

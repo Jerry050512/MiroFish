@@ -328,6 +328,28 @@ class BaseGraphMemoryUpdater:
         """添加活动到队列"""
         self._activity_queue.put(activity)
     
+    def add_activity_from_dict(self, data: Dict[str, Any], platform: str):
+        """
+        从字典添加活动
+
+        Args:
+            data: 动作数据字典
+            platform: 平台名称
+        """
+        try:
+            activity = AgentActivity(
+                platform=platform,
+                agent_id=data.get("agent_id", 0),
+                agent_name=data.get("agent_name", ""),
+                action_type=data.get("action_type", ""),
+                action_args=data.get("action_args", {}),
+                round_num=data.get("round", 0),
+                timestamp=data.get("timestamp", datetime.now().isoformat())
+            )
+            self.add_activity(activity)
+        except Exception as e:
+            logger.error(f"解析活动数据失败: {e}")
+
     def get_stats(self) -> Dict[str, Any]:
         """获取统计信息"""
         with self._buffer_lock:

@@ -97,27 +97,30 @@ class LocalSearcher:
         related_relations = self._get_related_relations(matched_entities)
         
         # 4. 获取邻居实体
-        all_entities = set(matched_entities)
+        all_entities_dict = {e.id: e for e in matched_entities}
         for entity in matched_entities:
             neighbors = self.graph_store.get_neighbors(entity.id, neighbor_depth)
             for depth, neighbor_list in neighbors.items():
-                all_entities.update(neighbor_list)
+                for neighbor in neighbor_list:
+                    all_entities_dict[neighbor.id] = neighbor
+
+        all_entities_list = list(all_entities_dict.values())
         
         # 5. 获取文本块
         text_chunks = []
         if include_text_chunks:
-            text_chunks = self._get_related_text_chunks(list(all_entities), related_relations)
+            text_chunks = self._get_related_text_chunks(all_entities_list, related_relations)
         
         # 6. 构建上下文文本
         context_text = self._build_context_text(
-            list(all_entities),
+            all_entities_list,
             related_relations,
             text_chunks
         )
         
         result = LocalSearchResult(
             query=query,
-            entities=list(all_entities),
+            entities=all_entities_list,
             relations=related_relations,
             text_chunks=text_chunks,
             context_text=context_text
@@ -133,7 +136,7 @@ class LocalSearcher:
         found_entities = []
         
         for entity in self.graph_store.get_all_entities():
-            if entity.name.lower() in query_lower:
+            if entity.name.lower() in query_lower or entity.type.lower() in query_lower:
                 found_entities.append(entity.name)
         
         return found_entities
@@ -289,8 +292,26 @@ class GlobalSearcher:
         if not communities:
             communities = self.graph_store.get_all_communities()
         
-        # 按相关性排序（简单实现：按实体数量）
-        communities.sort(key=lambda c: len(c.entity_ids), reverse=True)
+        if not communities:
+            return []
+
+        if query:
+            query_lower = query.lower()
+            # 简单评分：摘要或内容中包含关键词
+            def score_community(c: Community):
+                score = 0
+                if query_lower in c.summary.lower():
+                    score += 100
+                if query_lower in c.full_content.lower():
+                    score += 50
+                # 加上实体数量作为微调
+                score += len(c.entity_ids)
+                return score
+
+            communities.sort(key=score_community, reverse=True)
+        else:
+            # 按实体数量排序
+            communities.sort(key=lambda c: len(c.entity_ids), reverse=True)
         
         return communities[:top_k]
     
