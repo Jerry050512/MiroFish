@@ -20,7 +20,7 @@ from zep_cloud.client import Zep
 
 from ..config import Config
 from ..utils.logger import get_logger
-from .zep_entity_reader import EntityNode, ZepEntityReader
+from .zep_entity_reader import EntityNode, get_entity_reader
 
 logger = get_logger('mirofish.oasis_profile')
 

@@ -80,13 +80,28 @@ class TestConfig:
         """测试验证缺失的密钥"""
         from app.config import Config
         
+        # 在本地 GraphRAG 模式下，只需要检查 LLM_API_KEY
         with patch.object(Config, 'LLM_API_KEY', None):
             with patch.object(Config, 'ZEP_API_KEY', None):
-                errors = Config.validate()
-                
-                assert len(errors) == 2
-                assert any("LLM_API_KEY" in err for err in errors)
-                assert any("ZEP_API_KEY" in err for err in errors)
+                with patch.object(Config, 'USE_LOCAL_GRAPHRAG', True):
+                    errors = Config.validate()
+                    
+                    assert len(errors) == 1
+                    assert any("LLM_API_KEY" in err for err in errors)
+    
+    def test_validate_with_missing_keys_zep_mode(self):
+        """测试Zep模式下验证缺失的密钥"""
+        from app.config import Config
+        
+        # 在 Zep 模式下，需要检查 LLM_API_KEY 和 ZEP_API_KEY
+        with patch.object(Config, 'LLM_API_KEY', None):
+            with patch.object(Config, 'ZEP_API_KEY', None):
+                with patch.object(Config, 'USE_LOCAL_GRAPHRAG', False):
+                    errors = Config.validate()
+                    
+                    assert len(errors) == 2
+                    assert any("LLM_API_KEY" in err for err in errors)
+                    assert any("ZEP_API_KEY" in err for err in errors)
 
     def test_validate_with_valid_keys(self):
         """测试验证有效的密钥"""

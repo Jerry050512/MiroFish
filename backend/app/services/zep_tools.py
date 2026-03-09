@@ -422,11 +422,19 @@ class ZepToolsService:
     RETRY_DELAY = 2.0
     
     def __init__(self, api_key: Optional[str] = None, llm_client: Optional[LLMClient] = None):
+        self.use_local = Config.USE_LOCAL_GRAPHRAG
         self.api_key = api_key or Config.ZEP_API_KEY
-        if not self.api_key:
-            raise ValueError("ZEP_API_KEY 未配置")
         
-        self.client = Zep(api_key=self.api_key)
+        if self.use_local:
+            from .local_graphrag import LocalMemoryService
+            self.local_memory = LocalMemoryService(
+                storage_dir=Config.GRAPHRAG_STORAGE_DIR
+            )
+            self.client = None
+        else:
+            if not self.api_key:
+                raise ValueError("ZEP_API_KEY 未配置")
+            self.client = Zep(api_key=self.api_key)
         # LLM客户端用于InsightForge生成子问题
         self._llm_client = llm_client
         logger.info("ZepToolsService 初始化完成")
@@ -485,6 +493,46 @@ class ZepToolsService:
         """
         logger.info(f"图谱搜索: graph_id={graph_id}, query={query[:50]}...")
         
+        if self.use_local:
+            # 本地模式搜索
+            search_type = "hybrid" if scope == "both" else ("local" if scope == "nodes" else "global")
+            # 这里的 mapping 逻辑根据 LocalMemoryService.search 的实现
+            # 实际上 LocalMemoryService.search 默认 Hybrid，我们直接用 hybrid
+            res = self.local_memory.search(query, search_type="hybrid", top_k=limit)
+
+            facts = []
+            for fact in res.get("text_chunks", []):
+                facts.append(fact.get("text", ""))
+
+            edges = []
+            for edge in res.get("relations", []):
+                edges.append({
+                    "uuid": edge.get("id", ""),
+                    "name": edge.get("relation_type", ""),
+                    "fact": edge.get("description", ""),
+                    "source_node_uuid": edge.get("source_id", ""),
+                    "target_node_uuid": edge.get("target_id", ""),
+                })
+                facts.append(edge.get("description", ""))
+
+            nodes = []
+            for node in res.get("entities", []):
+                nodes.append({
+                    "uuid": node.get("id", ""),
+                    "name": node.get("name", ""),
+                    "labels": [node.get("type", "Entity")],
+                    "summary": node.get("description", ""),
+                })
+                facts.append(f"[{node.get('name')}]: {node.get('description')}")
+
+            return SearchResult(
+                facts=list(set(facts)),
+                edges=edges,
+                nodes=nodes,
+                query=query,
+                total_count=len(facts)
+            )
+
         # 尝试使用Zep Cloud Search API
         try:
             search_results = self._call_with_retry(
@@ -659,6 +707,19 @@ class ZepToolsService:
         """
         logger.info(f"获取图谱 {graph_id} 的所有节点...")
 
+        if self.use_local:
+            nodes = self.local_memory.get_all_entities()
+            result = []
+            for node in nodes:
+                result.append(NodeInfo(
+                    uuid=node.get("id", ""),
+                    name=node.get("name", ""),
+                    labels=[node.get("type", "Entity")],
+                    summary=node.get("description", ""),
+                    attributes={}
+                ))
+            return result
+
         nodes = fetch_all_nodes(self.client, graph_id)
 
         result = []
@@ -687,6 +748,24 @@ class ZepToolsService:
             边列表（包含created_at, valid_at, invalid_at, expired_at）
         """
         logger.info(f"获取图谱 {graph_id} 的所有边...")
+
+        if self.use_local:
+            edges = self.local_memory.get_all_relations()
+            result = []
+            for edge in edges:
+                edge_info = EdgeInfo(
+                    uuid=edge.get("id", ""),
+                    name=edge.get("relation_type", ""),
+                    fact=edge.get("description", ""),
+                    source_node_uuid=edge.get("source_id", ""),
+                    target_node_uuid=edge.get("target_id", ""),
+                    source_node_name=edge.get("source_name", ""),
+                    target_node_name=edge.get("target_name", "")
+                )
+                if include_temporal:
+                    edge_info.created_at = edge.get("created_at")
+                result.append(edge_info)
+            return result
 
         edges = fetch_all_edges(self.client, graph_id)
 
@@ -725,6 +804,18 @@ class ZepToolsService:
         """
         logger.info(f"获取节点详情: {node_uuid[:8]}...")
         
+        if self.use_local:
+            entity = self.local_memory.graph_store.get_entity(node_uuid)
+            if not entity:
+                return None
+            return NodeInfo(
+                uuid=entity.id,
+                name=entity.name,
+                labels=[entity.type],
+                summary=entity.description,
+                attributes={}
+            )
+
         try:
             node = self._call_with_retry(
                 func=lambda: self.client.graph.node.get(uuid_=node_uuid),

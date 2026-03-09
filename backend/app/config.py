@@ -35,6 +35,13 @@ class Config:
     # Zep配置
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
     
+    # 本地 GraphRAG 配置
+    USE_LOCAL_GRAPHRAG = os.environ.get('USE_LOCAL_GRAPHRAG', 'false').lower() == 'true'
+    GRAPHRAG_STORAGE_DIR = os.environ.get('GRAPHRAG_STORAGE_DIR', os.path.join(os.path.dirname(__file__), '../../data/graphrag'))
+    GRAPHRAG_CHUNK_SIZE = int(os.environ.get('GRAPHRAG_CHUNK_SIZE', '500'))
+    GRAPHRAG_CHUNK_OVERLAP = int(os.environ.get('GRAPHRAG_CHUNK_OVERLAP', '50'))
+    GRAPHRAG_COMMUNITY_LEVELS = int(os.environ.get('GRAPHRAG_COMMUNITY_LEVELS', '2'))
+    
     # 文件上传配置
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '../uploads')
@@ -69,7 +76,8 @@ class Config:
         errors = []
         if not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY 未配置")
-        if not cls.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY 未配置")
+        # 如果使用 Zep，需要配置 ZEP_API_KEY
+        if not cls.USE_LOCAL_GRAPHRAG and not cls.ZEP_API_KEY:
+            errors.append("ZEP_API_KEY 未配置 (或使用本地 GraphRAG: USE_LOCAL_GRAPHRAG=true)")
         return errors
 

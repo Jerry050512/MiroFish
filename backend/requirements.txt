@@ -27,6 +27,15 @@ PyMuPDF>=1.24.0
 charset-normalizer>=3.0.0
 chardet>=5.0.0
 
+# ============= GraphRAG 本地图谱 =============
+# 图数据库
+networkx>=3.0.0
+# 社区检测 (Leiden 算法)
+igraph>=0.11.0
+leidenalg>=0.10.0
+# 向量计算
+numpy>=1.24.0
+
 # ============= 工具库 =============
 # 环境变量加载
 python-dotenv>=1.0.0

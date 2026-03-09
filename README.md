@@ -121,11 +121,32 @@ cp .env.example .env
 LLM_API_KEY=your_api_key
 LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 LLM_MODEL_NAME=qwen-plus
+```
 
+**记忆图谱配置（二选一）：**
+
+方式1 - 使用云端 Zep（默认）：
+```env
 # Zep Cloud 配置
 # 每月免费额度即可支撑简单使用：https://app.getzep.com/
+USE_LOCAL_GRAPHRAG=false
 ZEP_API_KEY=your_zep_api_key
 ```
+
+方式2 - 使用本地 GraphRAG（私有化部署）：
+```env
+# 本地 GraphRAG 配置
+# 无需 Zep API Key，完全本地运行
+USE_LOCAL_GRAPHRAG=true
+
+# 可选配置
+# GRAPHRAG_STORAGE_DIR=./data/graphrag  # 存储目录
+# GRAPHRAG_CHUNK_SIZE=500               # 文本分块大小
+# GRAPHRAG_CHUNK_OVERLAP=50             # 分块重叠大小
+# GRAPHRAG_COMMUNITY_LEVELS=2           # 社区检测层级
+```
+
+> 💡 **提示**: 本地 GraphRAG 基于 Microsoft GraphRAG 架构实现，支持完整的实体抽取、关系构建、社区检测和摘要生成，无需依赖外部云服务。
 
 #### 2. 安装依赖
 
@@ -182,10 +203,15 @@ docker compose up -d
 
 ### 测试覆盖
 
-- **后端测试** (pytest): 96 个测试
+- **后端测试** (pytest): 140+ 个测试
   - 模型层测试 (Project, Task)
   - 工具函数测试 (文件解析、重试机制)
   - 服务层测试 (文本处理)
+  - **本地 GraphRAG 测试** (44 个测试)
+    - 数据模型测试
+    - 存储层测试
+    - 索引管道测试
+    - 记忆服务测试
   - API 测试 (图谱接口)
   - 配置测试
 
